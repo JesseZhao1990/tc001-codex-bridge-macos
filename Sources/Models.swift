@@ -1,0 +1,189 @@
+import SwiftUI
+
+typealias ActivityState = AIActivityState
+
+extension AIActivityState {
+
+    var title: String {
+        switch self {
+        case .idle: return "空闲"
+        case .working: return "工作中"
+        case .waiting: return "待确认"
+        case .error: return "异常"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .idle: return "checkmark.circle.fill"
+        case .working: return "bolt.circle.fill"
+        case .waiting: return "questionmark.bubble.fill"
+        case .error: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .idle: return .yellow
+        case .working: return .green
+        case .waiting: return .blue
+        case .error: return .red
+        }
+    }
+
+    var animationFrameCount: Int {
+        switch self {
+        case .idle: return 1
+        case .working: return 8
+        case .waiting: return 6
+        case .error: return 2
+        }
+    }
+
+    var animationInterval: TimeInterval {
+        switch self {
+        case .idle: return 0
+        case .working: return 0.7
+        case .waiting: return 0.35
+        case .error: return 0.9
+        }
+    }
+}
+
+enum QuotaPageSchedule {
+    static let cycleDuration: TimeInterval = 10
+
+    static func duration(for page: Int) -> TimeInterval {
+        page.isMultiple(of: 2) ? 7 : 3
+    }
+
+    static func page(at elapsed: TimeInterval) -> Int {
+        let position = max(0, elapsed).truncatingRemainder(dividingBy: cycleDuration)
+        return position < duration(for: 0) ? 0 : 1
+    }
+}
+
+enum TokenMode: String, CaseIterable, Identifiable {
+    case codex
+    case manualBridge
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .codex: return "Codex 自动"
+        case .manualBridge: return "手动 / Bridge"
+        }
+    }
+}
+
+enum DeviceTransportMode: String, CaseIterable, Identifiable {
+    case automatic
+    case wifi
+    case bluetooth
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .automatic: return "自动"
+        case .wifi: return "Wi-Fi"
+        case .bluetooth: return "蓝牙"
+        }
+    }
+}
+
+enum AWTRIXUsageDisplay: Equatable {
+    case single(percent: Int)
+    case codexQuotas(fiveHour: Int?, sevenDay: Int?)
+
+    var signature: String {
+        switch self {
+        case let .single(percent):
+            return "single:\(percent)"
+        case let .codexQuotas(fiveHour, sevenDay):
+            return "quota:\(fiveHour.map(String.init) ?? "-"):\(sevenDay.map(String.init) ?? "-")"
+        }
+    }
+}
+
+enum DeviceConnectionState: Equatable {
+    case unknown
+    case checking
+    case connected
+    case failed(String)
+
+    var title: String {
+        switch self {
+        case .unknown: return "尚未检测"
+        case .checking: return "正在连接"
+        case .connected: return "已连接"
+        case .failed: return "连接失败"
+        }
+    }
+
+    var color: Color {
+        switch self {
+        case .unknown: return .secondary
+        case .checking: return .orange
+        case .connected: return .green
+        case .failed: return .red
+        }
+    }
+}
+
+struct CodexSnapshot: Equatable {
+    var activity: ActivityState
+    var contextRemainingPercent: Int?
+    var usedTokens: Int?
+    var contextWindow: Int?
+    var model: String?
+    var sessionName: String
+    var updatedAt: Date
+}
+
+struct DeviceStats: Equatable {
+    var version: String?
+    var appName: String?
+    var battery: Int?
+}
+
+struct NativeAppsSettings: Equatable {
+    static let supportedBLEMask: UInt8 = 0x1F
+
+    var showTime: Bool
+    var showDate: Bool
+    var showTemperature: Bool
+    var showHumidity: Bool
+    var showBattery: Bool
+
+    init(
+        showTime: Bool = false,
+        showDate: Bool = false,
+        showTemperature: Bool = false,
+        showHumidity: Bool = false,
+        showBattery: Bool = false
+    ) {
+        self.showTime = showTime
+        self.showDate = showDate
+        self.showTemperature = showTemperature
+        self.showHumidity = showHumidity
+        self.showBattery = showBattery
+    }
+
+    init(bleMask: UInt8) {
+        showTime = bleMask & (1 << 0) != 0
+        showDate = bleMask & (1 << 1) != 0
+        showTemperature = bleMask & (1 << 2) != 0
+        showHumidity = bleMask & (1 << 3) != 0
+        showBattery = bleMask & (1 << 4) != 0
+    }
+
+    var bleMask: UInt8 {
+        (showTime ? 1 << 0 : 0) |
+            (showDate ? 1 << 1 : 0) |
+            (showTemperature ? 1 << 2 : 0) |
+            (showHumidity ? 1 << 3 : 0) |
+            (showBattery ? 1 << 4 : 0)
+    }
+}
