@@ -82,6 +82,7 @@ final class BridgeStore: ObservableObject {
     @Published private(set) var bridgeError: String?
     @Published private(set) var lastSyncDate: Date?
     @Published private(set) var lastError: String?
+    @Published private(set) var lampTestActivity: ActivityState?
 
     let appName = "codex"
     let bridgePort: UInt16 = 8765
@@ -108,6 +109,7 @@ final class BridgeStore: ObservableObject {
     private var quotaCycleStartUptime: TimeInterval?
     private var quotaWarningFrame = 0
     private var automaticUsesBluetooth = false
+    private var lampTestSession = LampTestSession()
 
     init(
         defaults: UserDefaults = .standard,
@@ -171,6 +173,9 @@ final class BridgeStore: ObservableObject {
     }
 
     var effectiveActivity: ActivityState {
+        if let lampTestActivity {
+            return lampTestActivity
+        }
         if let externalErrorUntil, externalErrorUntil > Date() {
             return .error
         }
@@ -411,35 +416,13 @@ final class BridgeStore: ObservableObject {
     }
 
     func testLamp(_ state: ActivityState) {
-        let address = deviceAddress
-        let display = usageDisplay
-        let frame = renderedAnimationFrame(for: state)
-        let displayPage = quotaPage
-        let warningFrame = quotaWarningFrame
-        connectionState = .checking
-        Task { [weak self] in
-            guard let self else { return }
-            do {
-                let usedTransport = try await self.sendDisplay(
-                    address: address,
-                    display: display,
-                    activity: state,
-                    frame: frame,
-                    quotaPage: displayPage,
-                    quotaWarningFrame: warningFrame,
-                    previewActivity: state,
-                    switchToApp: true
-                )
-                self.activeTransport = usedTransport
-                self.connectionState = .connected
-                try? await Task.sleep(nanoseconds: 2_500_000_000)
-                self.syncIfNeeded(force: true, switchToApp: false)
-            } catch {
-                let message = error.localizedDescription
-                self.connectionState = .failed(message)
-                self.lastError = message
-            }
-        }
+        let now = Date()
+        lampTestSession.begin(state, at: now)
+        lampTestActivity = state
+        animationFrame = 0
+        lastAnimationDate = now
+        lastSyncedSignature = nil
+        syncIfNeeded(force: true, switchToApp: true)
     }
 
     func quit() {
@@ -510,7 +493,15 @@ final class BridgeStore: ObservableObject {
     }
 
     private func tick() {
-        if let externalErrorUntil, externalErrorUntil <= Date() {
+        let now = Date()
+        if lampTestSession.expireIfNeeded(at: now) {
+            lampTestActivity = nil
+            animationFrame = 0
+            lastAnimationDate = now
+            lastSyncedSignature = nil
+            syncIfNeeded(force: true, switchToApp: false)
+        }
+        if let externalErrorUntil, externalErrorUntil <= now {
             self.externalErrorUntil = nil
             syncIfNeeded(force: true, switchToApp: false)
         }
@@ -545,6 +536,7 @@ final class BridgeStore: ObservableObject {
         let frame = renderedAnimationFrame(for: activity)
         let displayPage = quotaPage
         let warningFrame = quotaWarningFrame
+        let lampTestGeneration = lampTestSession.deliveryGeneration(for: activity)
         let signature = syncSignature(
             address: deviceAddress,
             display: display,
@@ -589,6 +581,12 @@ final class BridgeStore: ObservableObject {
                 self.lastSyncDate = Date()
                 self.activeTransport = usedTransport
                 self.connectionState = .connected
+                if let lampTestGeneration {
+                    self.lampTestSession.markDisplayed(
+                        generation: lampTestGeneration,
+                        at: self.lastSyncDate ?? Date()
+                    )
+                }
                 if let stats { self.deviceStats = stats }
 
                 let currentActivity = self.effectiveActivity
@@ -685,7 +683,6 @@ final class BridgeStore: ObservableObject {
         frame: Int,
         quotaPage: Int,
         quotaWarningFrame: Int,
-        previewActivity: ActivityState? = nil,
         switchToApp: Bool
     ) async throws -> DeviceTransportMode {
         func sendWiFi() async throws {
@@ -697,7 +694,6 @@ final class BridgeStore: ObservableObject {
                 animationFrame: frame,
                 quotaPage: quotaPage,
                 quotaWarningFrame: quotaWarningFrame,
-                previewActivity: previewActivity,
                 switchToApp: switchToApp
             )
         }
@@ -708,8 +704,7 @@ final class BridgeStore: ObservableObject {
                 activity: activity,
                 animationFrame: frame,
                 quotaPage: quotaPage,
-                quotaWarningFrame: quotaWarningFrame,
-                previewActivity: previewActivity
+                quotaWarningFrame: quotaWarningFrame
             )
             try await bleClient.sendFrame(bluetoothFrame, switchToApp: switchToApp)
         }

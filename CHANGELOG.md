@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.1
+
+- Fixed status-lamp test buttons being overwritten by background synchronization.
+- Kept test states visible for four seconds after confirmed delivery to TC001.
+- Added animated waiting and error previews through the normal display queue.
+
 ## 1.7.0
 
 - Added a clickable version row and native update panel.

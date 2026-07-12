@@ -38,6 +38,16 @@ swiftc \
 swiftc \
   -swift-version 5 \
   -parse-as-library \
+  "$ROOT/Sources/Core/AIEvent.swift" \
+  "$ROOT/Sources/Models.swift" \
+  "$ROOT/Tests/LampTestSessionTests.swift" \
+  -framework SwiftUI \
+  -o "$BUILD_DIR/lamp-test-session-tests"
+"$BUILD_DIR/lamp-test-session-tests"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
   "$ROOT/Sources/UpdateCore.swift" \
   "$ROOT/Tests/UpdateCoreTests.swift" \
   -o "$BUILD_DIR/update-core-tests"

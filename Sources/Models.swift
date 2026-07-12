@@ -63,6 +63,42 @@ enum QuotaPageSchedule {
     }
 }
 
+struct LampTestSession {
+    static let visibleDuration: TimeInterval = 4
+    static let deliveryTimeout: TimeInterval = 15
+
+    private(set) var activity: ActivityState?
+    private(set) var visibleUntil: Date?
+    private var requestedAt: Date?
+    private var generation = 0
+
+    mutating func begin(_ activity: ActivityState, at date: Date) {
+        generation &+= 1
+        self.activity = activity
+        requestedAt = date
+        visibleUntil = nil
+    }
+
+    func deliveryGeneration(for activity: ActivityState) -> Int? {
+        self.activity == activity ? generation : nil
+    }
+
+    mutating func markDisplayed(generation deliveredGeneration: Int, at date: Date) {
+        guard deliveredGeneration == generation, activity != nil, visibleUntil == nil else { return }
+        visibleUntil = date.addingTimeInterval(Self.visibleDuration)
+    }
+
+    mutating func expireIfNeeded(at date: Date) -> Bool {
+        guard activity != nil else { return false }
+        let deadline = visibleUntil ?? requestedAt?.addingTimeInterval(Self.deliveryTimeout)
+        guard let deadline, date >= deadline else { return false }
+        activity = nil
+        requestedAt = nil
+        visibleUntil = nil
+        return true
+    }
+}
+
 enum TokenMode: String, CaseIterable, Identifiable {
     case codex
     case manualBridge
