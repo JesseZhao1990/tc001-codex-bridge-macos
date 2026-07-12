@@ -451,19 +451,20 @@ final class BridgeStore: ObservableObject {
     private func start() {
         guard timer == nil else { return }
         bleClient.onStateChange = { [weak self] state in
-            DispatchQueue.main.async {
-                guard let self else { return }
-                self.bluetoothState = state
+            guard let store = self else { return }
+            DispatchQueue.main.async { [store] in
+                store.bluetoothState = state
                 if state.isReady,
-                   self.transportMode == .bluetooth || self.automaticUsesBluetooth {
-                    self.connectionState = .connected
-                    self.syncIfNeeded(force: true, switchToApp: self.lastSyncDate == nil)
+                   store.transportMode == .bluetooth || store.automaticUsesBluetooth {
+                    store.connectionState = .connected
+                    store.syncIfNeeded(force: true, switchToApp: store.lastSyncDate == nil)
                 }
             }
         }
         bleClient.onInfoChange = { [weak self] info in
-            DispatchQueue.main.async {
-                self?.acceptBluetoothInfo(info)
+            guard let store = self else { return }
+            DispatchQueue.main.async { [store] in
+                store.acceptBluetoothInfo(info)
             }
         }
         bleClient.start()
@@ -471,12 +472,14 @@ final class BridgeStore: ObservableObject {
         let server = LocalBridgeServer(
             port: bridgePort,
             onCommand: { [weak self] command in
-                DispatchQueue.main.async { self?.handle(command) }
+                guard let store = self else { return }
+                DispatchQueue.main.async { [store] in store.handle(command) }
             },
             onState: { [weak self] ready, error in
-                DispatchQueue.main.async {
-                    self?.bridgeReady = ready
-                    self?.bridgeError = error
+                guard let store = self else { return }
+                DispatchQueue.main.async { [store] in
+                    store.bridgeReady = ready
+                    store.bridgeError = error
                 }
             }
         )
@@ -487,8 +490,9 @@ final class BridgeStore: ObservableObject {
             providers: aiProviders,
             enabledProviderIDs: [.codex]
         ) { [weak self] status in
-            DispatchQueue.main.async {
-                self?.acceptAIStatus(status)
+            guard let store = self else { return }
+            DispatchQueue.main.async { [store] in
+                store.acceptAIStatus(status)
             }
         }
         providerCoordinator = coordinator
@@ -496,8 +500,9 @@ final class BridgeStore: ObservableObject {
 
         testConnection()
         let timer = Timer(timeInterval: 0.35, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.tick()
+            guard let store = self else { return }
+            Task { @MainActor [store] in
+                store.tick()
             }
         }
         RunLoop.main.add(timer, forMode: .common)
