@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.1
+
+- Fixed Codex Desktop IPC activity mapping so active tasks show as working even when session logs are unavailable.
+- Added idle, waiting, error, and multi-thread activity aggregation for Codex Desktop.
+- Added quota discovery for the Codex executable bundled inside `ChatGPT.app`.
+
 ## 1.6.0
 
 - Added Wi-Fi, BLE, and automatic transport modes.

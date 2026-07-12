@@ -2,14 +2,18 @@ import Darwin
 import Foundation
 
 struct CodexDesktopActivitySignal: Equatable, Sendable {
-    let isWaiting: Bool
+    let activity: ActivityState
     let conversationID: String?
     let updatedAt: Date
+
+    var isWaiting: Bool { activity == .waiting }
 }
 
 struct CodexDesktopThreadStatusUpdate: Equatable, Sendable {
     let conversationID: String
-    let isWaiting: Bool
+    let activity: ActivityState
+
+    var isWaiting: Bool { activity == .waiting }
 }
 
 enum CodexDesktopIPCMessageInterpreter {
@@ -19,13 +23,10 @@ enum CodexDesktopIPCMessageInterpreter {
         guard let conversationID = conversationID(in: params) else { return nil }
 
         if let runtimeStatus = runtimeStatus(in: params) {
-            let type = runtimeStatus["type"] as? String
-            let flags = runtimeStatus["activeFlags"] as? [String] ?? []
-            let isWaiting = type == "active"
-                && (flags.contains("waitingOnApproval") || flags.contains("waitingOnUserInput"))
+            guard let activity = activity(from: runtimeStatus) else { return nil }
             return CodexDesktopThreadStatusUpdate(
                 conversationID: conversationID,
-                isWaiting: isWaiting
+                activity: activity
             )
         }
 
@@ -33,10 +34,28 @@ enum CodexDesktopIPCMessageInterpreter {
            method.contains("requestApproval") || method.contains("requestUserInput") {
             return CodexDesktopThreadStatusUpdate(
                 conversationID: conversationID,
-                isWaiting: true
+                activity: .waiting
             )
         }
         return nil
+    }
+
+    private static func activity(from runtimeStatus: [String: Any]) -> ActivityState? {
+        guard let type = (runtimeStatus["type"] as? String)?.lowercased() else { return nil }
+        let flags = (runtimeStatus["activeFlags"] as? [String] ?? []).map { $0.lowercased() }
+
+        switch type {
+        case "active":
+            let isWaiting = flags.contains("waitingonapproval")
+                || flags.contains("waitingonuserinput")
+            return isWaiting ? .waiting : .working
+        case "idle", "inactive", "notloaded", "not_loaded":
+            return .idle
+        case "error", "failed":
+            return .error
+        default:
+            return nil
+        }
     }
 
     private static func runtimeStatus(in value: Any) -> [String: Any]? {
@@ -54,11 +73,10 @@ enum CodexDesktopIPCMessageInterpreter {
                 }
             }
             if let status = object["status"] as? [String: Any],
-               status["type"] is String,
-               status["activeFlags"] != nil {
+               isRuntimeStatus(status) {
                 return status
             }
-            if object["type"] is String, object["activeFlags"] != nil {
+            if isRuntimeStatus(object) {
                 return object
             }
             for nested in object.values {
@@ -70,6 +88,11 @@ enum CodexDesktopIPCMessageInterpreter {
             }
         }
         return nil
+    }
+
+    private static func isRuntimeStatus(_ object: [String: Any]) -> Bool {
+        guard let type = (object["type"] as? String)?.lowercased() else { return false }
+        return ["active", "idle", "inactive", "notloaded", "not_loaded", "error", "failed"].contains(type)
     }
 
     private static func pathReferencesRuntimeStatus(_ value: Any?) -> Bool {
@@ -144,13 +167,17 @@ struct CodexDesktopIPCFrameDecoder {
 }
 
 final class CodexDesktopIPCMonitor: @unchecked Sendable {
+    private struct ThreadActivity {
+        let activity: ActivityState
+        let updatedAt: Date
+    }
+
     private let socketPath: String
     private let queue = DispatchQueue(label: "local.tc001.bridge.codex-ipc", qos: .utility)
     private let lock = NSLock()
     private var running = true
     private var activeSocket: Int32 = -1
-    private var waitingThreads: [String: Date] = [:]
-    private var lastStatusAt: Date?
+    private var threadActivities: [String: ThreadActivity] = [:]
 
     init(socketPath: String? = nil, startsAutomatically: Bool = true) {
         self.socketPath = socketPath ?? URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
@@ -170,14 +197,26 @@ final class CodexDesktopIPCMonitor: @unchecked Sendable {
         defer { lock.unlock() }
 
         let maximumAge: TimeInterval = 6 * 60 * 60
-        waitingThreads = waitingThreads.filter { now.timeIntervalSince($0.value) <= maximumAge }
-        guard let lastStatusAt, now.timeIntervalSince(lastStatusAt) <= maximumAge else { return nil }
-        let newestWaiting = waitingThreads.max { $0.value < $1.value }
+        threadActivities = threadActivities.filter {
+            now.timeIntervalSince($0.value.updatedAt) <= maximumAge
+        }
+        guard let selected = selectedActivity() else { return nil }
         return CodexDesktopActivitySignal(
-            isWaiting: newestWaiting != nil,
-            conversationID: newestWaiting?.key,
-            updatedAt: lastStatusAt
+            activity: selected.value.activity,
+            conversationID: selected.key,
+            updatedAt: selected.value.updatedAt
         )
+    }
+
+    private func selectedActivity() -> (key: String, value: ThreadActivity)? {
+        for activity in [ActivityState.waiting, .working, .error] {
+            if let selected = threadActivities
+                .filter({ $0.value.activity == activity })
+                .max(by: { $0.value.updatedAt < $1.value.updatedAt }) {
+                return selected
+            }
+        }
+        return threadActivities.max { $0.value.updatedAt < $1.value.updatedAt }
     }
 
     func stop() {
@@ -308,21 +347,16 @@ final class CodexDesktopIPCMonitor: @unchecked Sendable {
 
     private func ingest(_ update: CodexDesktopThreadStatusUpdate, at date: Date) {
         lock.lock()
-        if update.isWaiting {
-            waitingThreads[update.conversationID] = date
-        } else {
-            waitingThreads.removeValue(forKey: update.conversationID)
-        }
-        lastStatusAt = date
+        threadActivities[update.conversationID] = ThreadActivity(
+            activity: update.activity,
+            updatedAt: date
+        )
         lock.unlock()
     }
 
     private func markDisconnected() {
         lock.lock()
-        if !waitingThreads.isEmpty {
-            waitingThreads.removeAll()
-            lastStatusAt = Date()
-        }
+        threadActivities.removeAll()
         lock.unlock()
     }
 

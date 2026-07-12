@@ -5,6 +5,9 @@ struct CodexMonitorTests {
     static func main() throws {
         try approvalLifecycleIsTracked()
         try desktopIPCFramesAndWaitingFlagsAreParsed()
+        if ProcessInfo.processInfo.environment["TC001_LIVE_CODEX_ACTIVITY"] == "1" {
+            try liveDesktopActivityIsDetected()
+        }
         print("CodexMonitorTests: PASS")
     }
 
@@ -98,6 +101,7 @@ struct CodexMonitorTests {
             "missing IPC waiting update"
         )
         try check(update.conversationID == "thread-1", "IPC conversation id should be retained")
+        try check(update.activity == .waiting, "waiting flags should map to waiting")
         try check(update.isWaiting, "waitingOnApproval should enter waiting")
 
         let activeMessage: [String: Any] = [
@@ -111,7 +115,25 @@ struct CodexMonitorTests {
             CodexDesktopIPCMessageInterpreter.statusUpdate(from: activeMessage),
             "missing IPC active update"
         )
+        try check(active.activity == .working, "active runtime status should map to working")
         try check(!active.isWaiting, "empty active flags should clear waiting")
+
+        let idleMessage: [String: Any] = [
+            "method": "thread-stream-state-changed",
+            "params": [
+                "conversationId": "thread-1",
+                "change": [
+                    "threadSummary": [
+                        "threadRuntimeStatus": ["type": "idle"]
+                    ]
+                ]
+            ]
+        ]
+        let idle = try require(
+            CodexDesktopIPCMessageInterpreter.statusUpdate(from: idleMessage),
+            "missing IPC idle update"
+        )
+        try check(idle.activity == .idle, "idle runtime status should map to idle")
 
         let payload = try JSONSerialization.data(withJSONObject: waitingMessage)
         let size = UInt32(payload.count)
@@ -127,6 +149,24 @@ struct CodexMonitorTests {
         let decoded = decoder.append(frame.dropFirst(2))
         try check(decoded.count == 1, "one length-prefixed IPC message should decode")
         try check(decoded[0]["method"] as? String == "thread-stream-state-changed", "decoded IPC method mismatch")
+    }
+
+    private static func liveDesktopActivityIsDetected() throws {
+        let monitor = CodexMonitor()
+        let deadline = Date().addingTimeInterval(8)
+        var snapshot: CodexSnapshot?
+        repeat {
+            snapshot = monitor.snapshot()
+            if snapshot?.activity == .working || snapshot?.activity == .waiting { break }
+            Thread.sleep(forTimeInterval: 0.2)
+        } while Date() < deadline
+
+        let activity = try require(snapshot, "live Codex snapshot was not detected").activity
+        try check(
+            activity == .working || activity == .waiting,
+            "live Codex task should not be reported as idle"
+        )
+        print("Codex live activity: \(activity.rawValue)")
     }
 
     private static func require<T>(_ value: T?, _ message: String) throws -> T {

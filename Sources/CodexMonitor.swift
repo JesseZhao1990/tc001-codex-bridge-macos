@@ -267,17 +267,15 @@ final class CodexMonitor: @unchecked Sendable {
     private func applyingDesktopSignal(to snapshot: CodexSnapshot, now: Date) -> CodexSnapshot {
         guard let signal = desktopMonitor?.activitySignal(now: now) else { return snapshot }
         var result = snapshot
-        if signal.isWaiting {
-            result.activity = .waiting
-        }
+        result.activity = signal.activity
         result.updatedAt = max(result.updatedAt, signal.updatedAt)
         return result
     }
 
     private func desktopFallbackSnapshot(now: Date) -> CodexSnapshot? {
-        guard let signal = desktopMonitor?.activitySignal(now: now), signal.isWaiting else { return nil }
+        guard let signal = desktopMonitor?.activitySignal(now: now) else { return nil }
         return CodexSnapshot(
-            activity: .waiting,
+            activity: signal.activity,
             contextRemainingPercent: nil,
             usedTokens: nil,
             contextWindow: nil,

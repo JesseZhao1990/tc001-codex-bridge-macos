@@ -159,6 +159,8 @@ final class CodexRateLimitsClient: CodexRateLimitsFetching, @unchecked Sendable 
     private static func findExecutable() -> URL? {
         let home = FileManager.default.homeDirectoryForCurrentUser.path
         let candidates = [
+            "/Applications/ChatGPT.app/Contents/Resources/codex",
+            "\(home)/Applications/ChatGPT.app/Contents/Resources/codex",
             "/Applications/Codex.app/Contents/Resources/codex",
             "\(home)/Applications/Codex.app/Contents/Resources/codex",
             "\(home)/.local/bin/codex",
