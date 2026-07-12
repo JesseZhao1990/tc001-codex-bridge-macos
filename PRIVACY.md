@@ -20,6 +20,9 @@ analytics, advertising, or telemetry.
   the selected TC001 over the local network or Bluetooth.
 - The application does not send Codex prompt or response text to the TC001.
 - The application does not send data to a project-owned server.
+- Manual checks and user-enabled automatic updates request public release
+  metadata and assets from GitHub. These requests contain normal network
+  metadata, but no Codex session content, quota values, or TC001 data.
 
 Codex itself may communicate with OpenAI while the local executable is running,
 according to the Codex product's own behavior and privacy terms. That traffic

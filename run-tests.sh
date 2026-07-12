@@ -38,6 +38,42 @@ swiftc \
 swiftc \
   -swift-version 5 \
   -parse-as-library \
+  "$ROOT/Sources/UpdateCore.swift" \
+  "$ROOT/Tests/UpdateCoreTests.swift" \
+  -o "$BUILD_DIR/update-core-tests"
+"$BUILD_DIR/update-core-tests"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
+  "$ROOT/UpdaterHelper/TC001UpdateHelper.swift" \
+  -framework Foundation \
+  -o "$BUILD_DIR/tc001-update-helper"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
+  "$ROOT/Tests/UpdaterHelperIntegrationTests.swift" \
+  -framework Foundation \
+  -o "$BUILD_DIR/updater-helper-tests"
+"$BUILD_DIR/updater-helper-tests" "$BUILD_DIR/tc001-update-helper"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
+  "$ROOT/Sources/UpdateCore.swift" \
+  "$ROOT/Sources/AppUpdateManager.swift" \
+  "$ROOT/Tests/AppUpdateManagerTests.swift" \
+  -framework AppKit \
+  -framework Combine \
+  -framework CryptoKit \
+  -framework Foundation \
+  -o "$BUILD_DIR/app-update-manager-tests"
+"$BUILD_DIR/app-update-manager-tests"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
   "$ROOT/Sources/Core/AIEvent.swift" \
   "$ROOT/Sources/Models.swift" \
   "$ROOT/Sources/AWTRIXClient.swift" \

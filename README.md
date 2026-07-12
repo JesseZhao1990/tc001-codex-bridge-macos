@@ -18,6 +18,8 @@ Wi-Fi.
 - Center text alternates `5H 80` for 7 seconds and `7D 65` for 3 seconds
 - Time, date, temperature, humidity, and battery pages can be toggled over
   Wi-Fi or BLE
+- The version row opens an updater with automatic and manual GitHub Release
+  modes plus SHA-256 and code-signature verification
 
 ## Requirements
 

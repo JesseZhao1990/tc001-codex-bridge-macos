@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 struct TC001BridgeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = BridgeStore()
+    @StateObject private var updateManager = AppUpdateManager()
 
     var body: some Scene {
         MenuBarExtra {
@@ -38,7 +39,7 @@ struct TC001BridgeApp: App {
         .menuBarExtraStyle(.window)
 
         Window("TC001 Bridge 设置", id: "settings") {
-            SettingsView(store: store)
+            SettingsView(store: store, updateManager: updateManager)
         }
         .defaultPosition(.center)
         .windowResizability(.contentSize)

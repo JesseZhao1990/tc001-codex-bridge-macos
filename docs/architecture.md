@@ -14,6 +14,9 @@ flowchart LR
     B --> T
     U["SwiftUI settings"] --> W
     U --> B
+    G["GitHub Releases"] --> M["Update manager"]
+    M --> V["SHA-256 and signature validation"]
+    V --> X["Update helper"]
 ```
 
 ## Ownership boundaries
@@ -24,6 +27,9 @@ flowchart LR
 - `AWTRIXBLEClient` and `BLEProtocol` own GATT discovery and frame transfer.
 - `BridgeStore` coordinates state, display timing, settings, and transport
   fallback for the SwiftUI views.
+- `AppUpdateManager` discovers and validates GitHub Releases. The bundled
+  helper replaces the app only after the main process exits, then relaunches
+  it and rolls back if replacement or launch fails.
 
 The firmware receives already-rendered pixels. It does not parse Codex data or
 make network requests to OpenAI.

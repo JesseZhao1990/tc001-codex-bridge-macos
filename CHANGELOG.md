@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.7.0
+
+- Added a clickable version row and native update panel.
+- Added user-selectable automatic and manual update modes.
+- Added GitHub Release discovery with semantic-version selection.
+- Added SHA-256, bundle identifier, version, and code-signature verification before installation.
+- Added a bundled helper that safely replaces and relaunches the application with rollback on replacement failure.
+
 ## 1.6.1
 
 - Fixed Codex Desktop IPC activity mapping so active tasks show as working even when session logs are unavailable.

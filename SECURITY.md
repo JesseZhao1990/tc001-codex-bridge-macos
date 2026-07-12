@@ -22,6 +22,10 @@ device identifiers, or a TC001 full-flash backup.
 - Ad-hoc application signatures are intended for local development only.
   Public binaries should use Developer ID signing, hardened runtime, and Apple
   notarization.
+- The updater accepts archives only from this repository's GitHub Releases,
+  verifies the release SHA-256 digest, bundle identifier, version, and code
+  signature, and does not remove macOS quarantine attributes or bypass
+  Gatekeeper.
 
 The app intentionally displays quota percentages and coarse activity state; it
 does not need prompt or response text. Changes that transmit content should be

@@ -99,6 +99,8 @@ struct MenuContentView: View {
 
 struct SettingsView: View {
     @ObservedObject var store: BridgeStore
+    @ObservedObject var updateManager: AppUpdateManager
+    @State private var showingUpdatePanel = false
 
     var body: some View {
         Form {
@@ -294,9 +296,39 @@ struct SettingsView: View {
                     LabeledContent("TC001 页面", value: app)
                 }
             }
+
+            Section("关于") {
+                Button {
+                    showingUpdatePanel = true
+                } label: {
+                    HStack {
+                        Label("版本", systemImage: "info.circle")
+                        Spacer()
+                        if updateManager.hasAvailableUpdate {
+                            Circle()
+                                .fill(Color.blue)
+                                .frame(width: 7, height: 7)
+                        }
+                        Text(updateManager.currentVersion)
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
         }
         .formStyle(.grouped)
         .frame(width: 540, height: 720)
+        .sheet(isPresented: $showingUpdatePanel) {
+            AppUpdateView(manager: updateManager)
+        }
+        .task {
+            updateManager.start()
+        }
         .toolbar {
             ToolbarItem {
                 Button {

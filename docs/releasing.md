@@ -42,5 +42,8 @@ final artifact on a Mac that does not have the development build installed.
 
 - Tag the exact tested commit.
 - Attach the notarized ZIP and matching `.sha256` file.
+- Keep the asset names `TC001-Bridge-macOS.zip` and
+  `TC001-Bridge-macOS.zip.sha256`; the in-app updater resolves those exact
+  names.
 - Include the changelog, minimum macOS version, supported firmware version, and
   any known security limitations in the release notes.
