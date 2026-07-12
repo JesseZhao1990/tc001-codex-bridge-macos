@@ -71,7 +71,17 @@ swiftc \
 swiftc \
   -swift-version 5 \
   -parse-as-library \
+  "$ROOT/Sources/UpdateRelaunchCoordinator.swift" \
+  "$ROOT/Tests/UpdateRelaunchCoordinatorTests.swift" \
+  -framework AppKit \
+  -o "$BUILD_DIR/update-relaunch-coordinator-tests"
+"$BUILD_DIR/update-relaunch-coordinator-tests"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
   "$ROOT/Sources/UpdateCore.swift" \
+  "$ROOT/Sources/UpdateRelaunchCoordinator.swift" \
   "$ROOT/Sources/AppUpdateManager.swift" \
   "$ROOT/Tests/AppUpdateManagerTests.swift" \
   -framework AppKit \

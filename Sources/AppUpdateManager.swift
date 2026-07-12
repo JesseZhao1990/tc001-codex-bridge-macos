@@ -174,7 +174,7 @@ final class AppUpdateManager: ObservableObject {
             let preparedApplication = try await prepareApplication(from: release)
             status = .installing
             try launchUpdateHelper(with: preparedApplication)
-            NSApp.terminate(nil)
+            UpdateRelaunchCoordinator.terminateApplication()
         } catch {
             status = .failed(error.localizedDescription)
         }

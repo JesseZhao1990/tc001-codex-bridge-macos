@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.7.2
+
+- Fixed in-app updates hanging because the open update sheet blocked application termination.
+- Dismissed attached sheets before requesting a graceful restart.
+- Added a forced-exit fallback so the update helper cannot wait indefinitely.
+
 ## 1.7.1
 
 - Fixed status-lamp test buttons being overwritten by background synchronization.
