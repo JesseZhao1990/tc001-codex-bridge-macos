@@ -50,6 +50,55 @@ extension AIActivityState {
     }
 }
 
+enum QuotaKind: String, CaseIterable {
+    case fiveHour
+    case sevenDay
+}
+
+enum QuotaDisplayMode: Int, CaseIterable {
+    case fiveHourOnly = 1
+    case sevenDayOnly = 2
+    case both = 3
+
+    init(persistedRawValue: Int?) {
+        self = persistedRawValue.flatMap(Self.init(rawValue:)) ?? .both
+    }
+
+    var showsFiveHour: Bool {
+        self == .fiveHourOnly || self == .both
+    }
+
+    var showsSevenDay: Bool {
+        self == .sevenDayOnly || self == .both
+    }
+
+    var displayedQuotas: [QuotaKind] {
+        switch self {
+        case .fiveHourOnly: return [.fiveHour]
+        case .sevenDayOnly: return [.sevenDay]
+        case .both: return [.fiveHour, .sevenDay]
+        }
+    }
+
+    func quota(forPage page: Int) -> QuotaKind {
+        let quotas = displayedQuotas
+        let index = ((page % quotas.count) + quotas.count) % quotas.count
+        return quotas[index]
+    }
+
+    func settingVisibility(of quota: QuotaKind, to isVisible: Bool) -> QuotaDisplayMode {
+        let showsFiveHour = quota == .fiveHour ? isVisible : showsFiveHour
+        let showsSevenDay = quota == .sevenDay ? isVisible : showsSevenDay
+
+        switch (showsFiveHour, showsSevenDay) {
+        case (true, true): return .both
+        case (true, false): return .fiveHourOnly
+        case (false, true): return .sevenDayOnly
+        case (false, false): return self
+        }
+    }
+}
+
 enum QuotaPageSchedule {
     static let cycleDuration: TimeInterval = 10
 
@@ -57,7 +106,8 @@ enum QuotaPageSchedule {
         page.isMultiple(of: 2) ? 7 : 3
     }
 
-    static func page(at elapsed: TimeInterval) -> Int {
+    static func page(at elapsed: TimeInterval, displayMode: QuotaDisplayMode) -> Int {
+        guard displayMode == .both else { return 0 }
         let position = max(0, elapsed).truncatingRemainder(dividingBy: cycleDuration)
         return position < duration(for: 0) ? 0 : 1
     }
@@ -131,14 +181,18 @@ enum DeviceTransportMode: String, CaseIterable, Identifiable {
 
 enum AWTRIXUsageDisplay: Equatable {
     case single(percent: Int)
-    case codexQuotas(fiveHour: Int?, sevenDay: Int?)
+    case codexQuotas(
+        fiveHour: Int?,
+        sevenDay: Int?,
+        displayMode: QuotaDisplayMode
+    )
 
     var signature: String {
         switch self {
         case let .single(percent):
             return "single:\(percent)"
-        case let .codexQuotas(fiveHour, sevenDay):
-            return "quota:\(fiveHour.map(String.init) ?? "-"):\(sevenDay.map(String.init) ?? "-")"
+        case let .codexQuotas(fiveHour, sevenDay, displayMode):
+            return "quota:\(fiveHour.map(String.init) ?? "-"):\(sevenDay.map(String.init) ?? "-"):\(displayMode.rawValue)"
         }
     }
 }

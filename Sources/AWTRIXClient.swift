@@ -133,9 +133,13 @@ struct AWTRIXClient {
         case let .single(percent):
             drawQuotaRail(percent: percent, column: 0, into: &draw)
             drawQuotaRail(percent: nil, column: 31, into: &draw)
-        case let .codexQuotas(fiveHour, sevenDay):
-            drawQuotaRail(percent: fiveHour, column: 0, into: &draw)
-            drawQuotaRail(percent: sevenDay, column: 31, into: &draw)
+        case let .codexQuotas(fiveHour, sevenDay, displayMode):
+            if displayMode.showsFiveHour {
+                drawQuotaRail(percent: fiveHour, column: 0, into: &draw)
+            }
+            if displayMode.showsSevenDay {
+                drawQuotaRail(percent: sevenDay, column: 31, into: &draw)
+            }
         }
 
         _ = quotaWarningFrame
@@ -229,10 +233,10 @@ struct AWTRIXClient {
         case let .single(percent):
             let normalized = min(100, max(0, percent))
             return ("\(normalized)", normalized, "#FFFFFF", progressColor(for: normalized))
-        case let .codexQuotas(fiveHour, sevenDay):
-            let showSevenDay = quotaPage % 2 == 1
-            let label = showSevenDay ? "7D" : "5H"
-            let percent = showSevenDay ? sevenDay : fiveHour
+        case let .codexQuotas(fiveHour, sevenDay, displayMode):
+            let quota = displayMode.quota(forPage: quotaPage)
+            let label = quota == .sevenDay ? "7D" : "5H"
+            let percent = quota == .sevenDay ? sevenDay : fiveHour
             guard let percent else {
                 return ("\(label)  --", nil, "#8E8E93", "#636366")
             }

@@ -21,14 +21,18 @@ struct MenuContentView: View {
 
             if store.tokenMode == .codex {
                 HStack(alignment: .top, spacing: 12) {
-                    QuotaValueView(
-                        title: "5 小时",
-                        percent: store.fiveHourRemainingPercent
-                    )
-                    QuotaValueView(
-                        title: "7 天",
-                        percent: store.sevenDayRemainingPercent
-                    )
+                    if store.showsFiveHourQuota {
+                        QuotaValueView(
+                            title: "5 小时",
+                            percent: store.fiveHourRemainingPercent
+                        )
+                    }
+                    if store.showsSevenDayQuota {
+                        QuotaValueView(
+                            title: "7 天",
+                            percent: store.sevenDayRemainingPercent
+                        )
+                    }
                     Spacer(minLength: 0)
                     Label(store.effectiveActivity.title, systemImage: store.effectiveActivity.systemImage)
                         .foregroundStyle(store.effectiveActivity.color)
@@ -101,6 +105,18 @@ struct SettingsView: View {
     @ObservedObject var store: BridgeStore
     @ObservedObject var updateManager: AppUpdateManager
     @State private var showingUpdatePanel = false
+
+    private func quotaBinding(_ quota: QuotaKind) -> Binding<Bool> {
+        Binding(
+            get: {
+                switch quota {
+                case .fiveHour: return store.showsFiveHourQuota
+                case .sevenDay: return store.showsSevenDayQuota
+                }
+            },
+            set: { store.setQuota(quota, isVisible: $0) }
+        )
+    }
 
     var body: some View {
         Form {
@@ -248,8 +264,21 @@ struct SettingsView: View {
                             .frame(width: 44, alignment: .trailing)
                     }
                 } else {
-                    LabeledContent("5 小时额度", value: store.quotaText(store.fiveHourRemainingPercent))
-                    LabeledContent("7 天额度", value: store.quotaText(store.sevenDayRemainingPercent))
+                    QuotaToggleRow(
+                        title: "5 小时额度",
+                        value: store.quotaText(store.fiveHourRemainingPercent),
+                        isOn: quotaBinding(.fiveHour),
+                        canTurnOff: store.showsSevenDayQuota
+                    )
+                    QuotaToggleRow(
+                        title: "7 天额度",
+                        value: store.quotaText(store.sevenDayRemainingPercent),
+                        isOn: quotaBinding(.sevenDay),
+                        canTurnOff: store.showsFiveHourQuota
+                    )
+                    Text("至少选择一种额度；关闭仅影响 TC001 和菜单栏显示。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 
@@ -357,8 +386,12 @@ private struct ModelStatusCard: View {
                     .foregroundStyle(.secondary)
                 HStack(spacing: 8) {
                     if store.tokenMode == .codex {
-                        Label("5H \(store.quotaText(store.fiveHourRemainingPercent))", systemImage: "hourglass")
-                        Label("7D \(store.quotaText(store.sevenDayRemainingPercent))", systemImage: "calendar")
+                        if store.showsFiveHourQuota {
+                            Label("5H \(store.quotaText(store.fiveHourRemainingPercent))", systemImage: "hourglass")
+                        }
+                        if store.showsSevenDayQuota {
+                            Label("7D \(store.quotaText(store.sevenDayRemainingPercent))", systemImage: "calendar")
+                        }
                     } else {
                         Label("\(store.effectivePercent)%", systemImage: "chart.bar.fill")
                     }
@@ -405,6 +438,27 @@ private struct StatusLampPreview: View {
         .frame(width: 58, height: 58)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("模型状态：\(activity.title)")
+    }
+}
+
+private struct QuotaToggleRow: View {
+    let title: String
+    let value: String
+    @Binding var isOn: Bool
+    let canTurnOff: Bool
+
+    var body: some View {
+        HStack {
+            Text(title)
+            Spacer()
+            Text(value)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+            Toggle("显示\(title)", isOn: $isOn)
+                .labelsHidden()
+                .disabled(isOn && !canTurnOff)
+                .accessibilityLabel("显示\(title)")
+        }
     }
 }
 

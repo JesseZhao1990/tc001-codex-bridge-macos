@@ -9,6 +9,7 @@ final class BridgeStore: ObservableObject {
         static let deviceAddress = "deviceAddress"
         static let transportMode = "transportMode"
         static let tokenMode = "tokenMode"
+        static let quotaDisplayMode = "quotaDisplayMode"
         static let manualPercent = "manualPercent"
         static let autoMonitor = "autoMonitor"
     }
@@ -44,6 +45,17 @@ final class BridgeStore: ObservableObject {
                 quotaPage = 0
                 quotaCycleStartUptime = nil
             }
+            scheduleSync()
+        }
+    }
+
+    @Published var quotaDisplayMode: QuotaDisplayMode {
+        didSet {
+            guard quotaDisplayMode != oldValue else { return }
+            defaults.set(quotaDisplayMode.rawValue, forKey: DefaultsKey.quotaDisplayMode)
+            quotaPage = 0
+            quotaCycleStartUptime = nil
+            lastSyncedSignature = nil
             scheduleSync()
         }
     }
@@ -124,6 +136,9 @@ final class BridgeStore: ObservableObject {
             rawValue: defaults.string(forKey: DefaultsKey.transportMode) ?? ""
         ) ?? .automatic
         self.tokenMode = TokenMode(rawValue: defaults.string(forKey: DefaultsKey.tokenMode) ?? "") ?? .codex
+        self.quotaDisplayMode = QuotaDisplayMode(
+            persistedRawValue: defaults.object(forKey: DefaultsKey.quotaDisplayMode) as? Int
+        )
         self.manualPercent = defaults.object(forKey: DefaultsKey.manualPercent) == nil
             ? 73
             : defaults.double(forKey: DefaultsKey.manualPercent)
@@ -145,7 +160,14 @@ final class BridgeStore: ObservableObject {
 
     var effectivePercent: Int {
         if tokenMode == .codex {
-            return fiveHourRemainingPercent ?? sevenDayRemainingPercent ?? 0
+            switch quotaDisplayMode {
+            case .fiveHourOnly:
+                return fiveHourRemainingPercent ?? 0
+            case .sevenDayOnly:
+                return sevenDayRemainingPercent ?? 0
+            case .both:
+                return fiveHourRemainingPercent ?? sevenDayRemainingPercent ?? 0
+            }
         }
         return min(100, max(0, Int(manualPercent.rounded())))
     }
@@ -165,7 +187,8 @@ final class BridgeStore: ObservableObject {
         case .codex:
             return .codexQuotas(
                 fiveHour: fiveHourRemainingPercent,
-                sevenDay: sevenDayRemainingPercent
+                sevenDay: sevenDayRemainingPercent,
+                displayMode: quotaDisplayMode
             )
         case .manualBridge:
             return .single(percent: effectivePercent)
@@ -199,6 +222,18 @@ final class BridgeStore: ObservableObject {
 
     func quotaText(_ percent: Int?) -> String {
         percent.map { "\($0)%" } ?? "--"
+    }
+
+    var showsFiveHourQuota: Bool {
+        quotaDisplayMode.showsFiveHour
+    }
+
+    var showsSevenDayQuota: Bool {
+        quotaDisplayMode.showsSevenDay
+    }
+
+    func setQuota(_ quota: QuotaKind, isVisible: Bool) {
+        quotaDisplayMode = quotaDisplayMode.settingVisibility(of: quota, to: isVisible)
     }
 
     var bridgeAddress: String {
@@ -655,7 +690,10 @@ final class BridgeStore: ObservableObject {
         if tokenMode == .codex {
             let uptime = ProcessInfo.processInfo.systemUptime
             if let quotaCycleStartUptime {
-                let scheduledPage = QuotaPageSchedule.page(at: uptime - quotaCycleStartUptime)
+                let scheduledPage = QuotaPageSchedule.page(
+                    at: uptime - quotaCycleStartUptime,
+                    displayMode: quotaDisplayMode
+                )
                 if scheduledPage != quotaPage {
                     quotaPage = scheduledPage
                     displayChanged = true

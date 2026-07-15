@@ -5,13 +5,27 @@ struct AWTRIXRendererTests {
     static func main() throws {
         try check(QuotaPageSchedule.duration(for: 0) == 7, "5-hour page should last 7 seconds")
         try check(QuotaPageSchedule.duration(for: 1) == 3, "7-day page should last 3 seconds")
-        try check(QuotaPageSchedule.page(at: 0) == 0, "cycle should start with the 5-hour page")
-        try check(QuotaPageSchedule.page(at: 6.99) == 0, "5-hour page should occupy the first 7 seconds")
-        try check(QuotaPageSchedule.page(at: 7) == 1, "7-day page should begin at 7 seconds")
-        try check(QuotaPageSchedule.page(at: 9.99) == 1, "7-day page should occupy the final 3 seconds")
-        try check(QuotaPageSchedule.page(at: 10) == 0, "the next cycle should return to the 5-hour page")
+        try check(QuotaPageSchedule.page(at: 0, displayMode: .both) == 0, "cycle should start with the 5-hour page")
+        try check(QuotaPageSchedule.page(at: 6.99, displayMode: .both) == 0, "5-hour page should occupy the first 7 seconds")
+        try check(QuotaPageSchedule.page(at: 7, displayMode: .both) == 1, "7-day page should begin at 7 seconds")
+        try check(QuotaPageSchedule.page(at: 9.99, displayMode: .both) == 1, "7-day page should occupy the final 3 seconds")
+        try check(QuotaPageSchedule.page(at: 10, displayMode: .both) == 0, "the next cycle should return to the 5-hour page")
+        try check(QuotaPageSchedule.page(at: 7, displayMode: .fiveHourOnly) == 0, "5-hour-only mode should not rotate pages")
+        try check(QuotaPageSchedule.page(at: 7, displayMode: .sevenDayOnly) == 0, "7-day-only mode should not rotate pages")
 
-        let display = AWTRIXUsageDisplay.codexQuotas(fiveHour: 50, sevenDay: 25)
+        try check(QuotaDisplayMode(persistedRawValue: nil) == .both, "missing display preference should preserve the legacy two-quota default")
+        try check(QuotaDisplayMode(persistedRawValue: 0) == .both, "invalid display preference should migrate to both quotas")
+        try check(QuotaDisplayMode(persistedRawValue: 2) == .sevenDayOnly, "saved 7-day-only preference should restore")
+        try check(QuotaDisplayMode.both.settingVisibility(of: .sevenDay, to: false) == .fiveHourOnly, "turning off 7-day should leave 5-hour visible")
+        try check(QuotaDisplayMode.both.settingVisibility(of: .fiveHour, to: false) == .sevenDayOnly, "turning off 5-hour should leave 7-day visible")
+        try check(QuotaDisplayMode.fiveHourOnly.settingVisibility(of: .fiveHour, to: false) == .fiveHourOnly, "the last visible quota should not turn off")
+        try check(QuotaDisplayMode.sevenDayOnly.quota(forPage: 0) == .sevenDay, "page zero should resolve to 7-day in 7-day-only mode")
+
+        let display = AWTRIXUsageDisplay.codexQuotas(
+            fiveHour: 50,
+            sevenDay: 25,
+            displayMode: .both
+        )
         let fiveHour = AWTRIXClient.customPayload(
             usageDisplay: display,
             activity: .working,
@@ -25,25 +39,37 @@ struct AWTRIXRendererTests {
             quotaPage: 1
         )
         let missing = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil),
+            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil, displayMode: .both),
             activity: .error,
             animationFrame: 0,
             quotaPage: 1
         )
         let partial = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: 50, sevenDay: 25),
+            usageDisplay: .codexQuotas(fiveHour: 50, sevenDay: 25, displayMode: .both),
             activity: .idle,
             animationFrame: 0,
             quotaPage: 0
         )
         let onePercent = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: 1, sevenDay: 0),
+            usageDisplay: .codexQuotas(fiveHour: 1, sevenDay: 0, displayMode: .both),
             activity: .idle,
             animationFrame: 0,
             quotaPage: 0
         )
         let spacedMetric = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: 80, sevenDay: 65),
+            usageDisplay: .codexQuotas(fiveHour: 80, sevenDay: 65, displayMode: .both),
+            activity: .working,
+            animationFrame: 0,
+            quotaPage: 0
+        )
+        let fiveHourOnly = AWTRIXClient.customPayload(
+            usageDisplay: .codexQuotas(fiveHour: 80, sevenDay: 65, displayMode: .fiveHourOnly),
+            activity: .working,
+            animationFrame: 0,
+            quotaPage: 1
+        )
+        let sevenDayOnly = AWTRIXClient.customPayload(
+            usageDisplay: .codexQuotas(fiveHour: 80, sevenDay: 65, displayMode: .sevenDayOnly),
             activity: .working,
             animationFrame: 0,
             quotaPage: 0
@@ -55,10 +81,12 @@ struct AWTRIXRendererTests {
         try validateBounds(in: partial)
         try validateBounds(in: onePercent)
         try validateBounds(in: spacedMetric)
+        try validateBounds(in: fiveHourOnly)
+        try validateBounds(in: sevenDayOnly)
 
         for activity in ActivityState.allCases {
             let preview = AWTRIXClient.customPayload(
-                usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil),
+                usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil, displayMode: .both),
                 activity: .idle,
                 animationFrame: 0,
                 quotaPage: 0,
@@ -81,6 +109,15 @@ struct AWTRIXRendererTests {
         try check(try integer(rightLines[0], at: 3) == 7, "7-day track should reach the bottom")
         try check(try pointRows(in: partial, column: 0) == [4, 5, 6, 7], "50 percent should fill four pixels")
         try check(try pointRows(in: partial, column: 31) == [6, 7], "25 percent should fill two pixels")
+        try check(try verticalLines(in: fiveHourOnly, column: 0).count == 1, "5-hour-only mode should retain the left rail")
+        try check(try verticalLines(in: fiveHourOnly, column: 31).isEmpty, "5-hour-only mode should hide the right rail")
+        try check(try verticalLines(in: sevenDayOnly, column: 0).isEmpty, "7-day-only mode should hide the left rail")
+        try check(try verticalLines(in: sevenDayOnly, column: 31).count == 1, "7-day-only mode should retain the right rail")
+        try check(
+            AWTRIXUsageDisplay.codexQuotas(fiveHour: 80, sevenDay: 65, displayMode: .fiveHourOnly).signature !=
+                AWTRIXUsageDisplay.codexQuotas(fiveHour: 80, sevenDay: 65, displayMode: .sevenDayOnly).signature,
+            "display mode should participate in synchronization signatures"
+        )
 
         try check(try pointRows(in: onePercent, column: 0) == [7], "a positive quota should light one partial pixel")
         try check(try pointRows(in: onePercent, column: 31).isEmpty, "zero percent should only show its track")
@@ -91,7 +128,7 @@ struct AWTRIXRendererTests {
         try check(try pointCount(in: spacedMetric, column: 27) == 0, "quota text should not include a percent glyph")
 
         let maxText = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: 100, sevenDay: 100),
+            usageDisplay: .codexQuotas(fiveHour: 100, sevenDay: 100, displayMode: .both),
             activity: .idle,
             animationFrame: 0,
             quotaPage: 0
@@ -218,7 +255,7 @@ struct AWTRIXRendererTests {
         color: String
     ) throws {
         let payload = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil),
+            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil, displayMode: .both),
             activity: activity,
             animationFrame: frame,
             quotaPage: 0
@@ -235,13 +272,13 @@ struct AWTRIXRendererTests {
         _ message: String
     ) throws {
         let firstPayload = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil),
+            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil, displayMode: .both),
             activity: activity,
             animationFrame: first,
             quotaPage: 0
         )
         let secondPayload = AWTRIXClient.customPayload(
-            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil),
+            usageDisplay: .codexQuotas(fiveHour: nil, sevenDay: nil, displayMode: .both),
             activity: activity,
             animationFrame: second,
             quotaPage: 0
