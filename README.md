@@ -16,6 +16,8 @@ Wi-Fi.
 - Center lamp: yellow idle, green working, blue waiting for confirmation, red
   error
 - Center text alternates `5H 80` for 7 seconds and `7D 65` for 3 seconds
+- Five-hour and seven-day quotas can be enabled independently; single-quota
+  modes stay on the selected value without page rotation
 - Time, date, temperature, humidity, and battery pages can be toggled over
   Wi-Fi or BLE
 - The version row opens an updater with automatic and manual GitHub Release

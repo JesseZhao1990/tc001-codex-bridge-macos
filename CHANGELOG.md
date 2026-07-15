@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.8.0
+
+- Added independent five-hour and seven-day quota display switches.
+- Added persistent five-hour-only, seven-day-only, and combined display modes.
+- Stopped page rotation when only one quota is enabled.
+- Hid disabled quota rails and kept enabled quota positions consistent across Wi-Fi and BLE.
+- Updated the menu bar and model-status summaries to follow the selected quotas.
+
 ## 1.7.2
 
 - Fixed in-app updates hanging because the open update sheet blocked application termination.

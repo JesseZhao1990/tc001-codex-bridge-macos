@@ -30,6 +30,9 @@ Developer ID signature and Apple notarization.
 ## Codex quota and status
 
 - `5H` quota is shown for 7 seconds and `7D` quota for 3 seconds.
+- The five-hour and seven-day switches can show either quota by itself or both
+  together. At least one quota remains enabled.
+- Single-quota mode stays on the selected value and hides the other quota rail.
 - The left 1 x 8 bar is the five-hour remaining quota.
 - The right 1 x 8 bar is the seven-day remaining quota.
 - Yellow means idle, green means working, blue means waiting for confirmation,

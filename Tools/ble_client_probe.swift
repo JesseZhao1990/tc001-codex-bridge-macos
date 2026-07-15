@@ -29,7 +29,11 @@ struct BLEClientProbe {
                 }
 
                 let frame = AWTRIXClient.rgb565Frame(
-                    usageDisplay: .codexQuotas(fiveHour: 54, sevenDay: 79),
+                    usageDisplay: .codexQuotas(
+                        fiveHour: 54,
+                        sevenDay: 79,
+                        displayMode: .both
+                    ),
                     activity: .idle,
                     animationFrame: 0,
                     quotaPage: 0
