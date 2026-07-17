@@ -20,6 +20,34 @@ struct AWTRIXRendererTests {
         try check(QuotaDisplayMode.both.settingVisibility(of: .fiveHour, to: false) == .sevenDayOnly, "turning off 5-hour should leave 7-day visible")
         try check(QuotaDisplayMode.fiveHourOnly.settingVisibility(of: .fiveHour, to: false) == .fiveHourOnly, "the last visible quota should not turn off")
         try check(QuotaDisplayMode.sevenDayOnly.quota(forPage: 0) == .sevenDay, "page zero should resolve to 7-day in 7-day-only mode")
+        try check(
+            QuotaSummaryFormatter.codexMenuBarTitle(
+                displayMode: .both,
+                fiveHour: 80,
+                sevenDay: 65
+            ) == "5H 80% · 7D 65%",
+            "menu bar should summarize both enabled quotas"
+        )
+        try check(
+            QuotaSummaryFormatter.codexMenuBarTitle(
+                displayMode: .fiveHourOnly,
+                fiveHour: 80,
+                sevenDay: 65
+            ) == "5H 80%",
+            "menu bar should hide the disabled 7-day quota"
+        )
+        try check(
+            QuotaSummaryFormatter.codexMenuBarTitle(
+                displayMode: .sevenDayOnly,
+                fiveHour: 80,
+                sevenDay: nil
+            ) == "7D --",
+            "menu bar should preserve an enabled quota while its value is unavailable"
+        )
+        try check(
+            QuotaSummaryFormatter.manualMenuBarTitle(percent: 105) == "TOKEN 100%",
+            "manual menu bar values should clamp to 100 percent"
+        )
 
         let display = AWTRIXUsageDisplay.codexQuotas(
             fiveHour: 50,

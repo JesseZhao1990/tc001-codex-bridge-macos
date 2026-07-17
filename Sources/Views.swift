@@ -69,6 +69,25 @@ struct MenuContentView: View {
             }
             .font(.caption)
 
+            Button {
+                store.desktopCardVisible.toggle()
+            } label: {
+                HStack {
+                    Label(
+                        store.desktopCardVisible ? "隐藏桌面卡片" : "显示桌面卡片",
+                        systemImage: store.desktopCardVisible
+                            ? "rectangle.on.rectangle.slash"
+                            : "rectangle.on.rectangle"
+                    )
+                    Spacer()
+                    Text(store.desktopCardAlwaysOnTop ? "已置顶" : "普通窗口")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
             Divider()
 
             HStack(spacing: 10) {
@@ -276,10 +295,21 @@ struct SettingsView: View {
                         isOn: quotaBinding(.sevenDay),
                         canTurnOff: store.showsFiveHourQuota
                     )
-                    Text("至少选择一种额度；关闭仅影响 TC001 和菜单栏显示。")
+                    Text("至少选择一种额度；开关会同步影响 TC001、菜单栏和桌面卡片。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+            }
+
+            Section("显示") {
+                Toggle("菜单栏显示额度", isOn: $store.showQuotaInMenuBar)
+                Toggle("显示桌面卡片", isOn: $store.desktopCardVisible)
+                Toggle("桌面卡片始终置顶", isOn: $store.desktopCardAlwaysOnTop)
+                    .disabled(!store.desktopCardVisible)
+
+                Text("桌面卡片可以拖动位置，并会记住上次停放的位置。")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
 
             Section("模型状态") {

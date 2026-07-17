@@ -12,6 +12,9 @@ final class BridgeStore: ObservableObject {
         static let quotaDisplayMode = "quotaDisplayMode"
         static let manualPercent = "manualPercent"
         static let autoMonitor = "autoMonitor"
+        static let showQuotaInMenuBar = "showQuotaInMenuBar"
+        static let desktopCardVisible = "desktopCardVisible"
+        static let desktopCardAlwaysOnTop = "desktopCardAlwaysOnTop"
     }
 
     @Published var deviceAddress: String {
@@ -70,6 +73,24 @@ final class BridgeStore: ObservableObject {
         didSet {
             defaults.set(autoMonitorEnabled, forKey: DefaultsKey.autoMonitor)
             scheduleSync()
+        }
+    }
+
+    @Published var showQuotaInMenuBar: Bool {
+        didSet {
+            defaults.set(showQuotaInMenuBar, forKey: DefaultsKey.showQuotaInMenuBar)
+        }
+    }
+
+    @Published var desktopCardVisible: Bool {
+        didSet {
+            defaults.set(desktopCardVisible, forKey: DefaultsKey.desktopCardVisible)
+        }
+    }
+
+    @Published var desktopCardAlwaysOnTop: Bool {
+        didSet {
+            defaults.set(desktopCardAlwaysOnTop, forKey: DefaultsKey.desktopCardAlwaysOnTop)
         }
     }
 
@@ -145,6 +166,15 @@ final class BridgeStore: ObservableObject {
         self.autoMonitorEnabled = defaults.object(forKey: DefaultsKey.autoMonitor) == nil
             ? true
             : defaults.bool(forKey: DefaultsKey.autoMonitor)
+        self.showQuotaInMenuBar = defaults.object(forKey: DefaultsKey.showQuotaInMenuBar) == nil
+            ? true
+            : defaults.bool(forKey: DefaultsKey.showQuotaInMenuBar)
+        self.desktopCardVisible = defaults.object(forKey: DefaultsKey.desktopCardVisible) == nil
+            ? true
+            : defaults.bool(forKey: DefaultsKey.desktopCardVisible)
+        self.desktopCardAlwaysOnTop = defaults.object(forKey: DefaultsKey.desktopCardAlwaysOnTop) == nil
+            ? true
+            : defaults.bool(forKey: DefaultsKey.desktopCardAlwaysOnTop)
 
         DispatchQueue.main.async { [weak self] in
             self?.start()
@@ -282,6 +312,20 @@ final class BridgeStore: ObservableObject {
         case .working: return "bolt.horizontal.circle.fill"
         case .waiting: return "questionmark.bubble.fill"
         case .error: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var menuBarQuotaTitle: String {
+        guard showQuotaInMenuBar else { return "" }
+        switch tokenMode {
+        case .codex:
+            return QuotaSummaryFormatter.codexMenuBarTitle(
+                displayMode: quotaDisplayMode,
+                fiveHour: fiveHourRemainingPercent,
+                sevenDay: sevenDayRemainingPercent
+            )
+        case .manualBridge:
+            return QuotaSummaryFormatter.manualMenuBarTitle(percent: effectivePercent)
         }
     }
 

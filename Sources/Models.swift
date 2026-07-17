@@ -163,6 +163,31 @@ enum TokenMode: String, CaseIterable, Identifiable {
     }
 }
 
+enum QuotaSummaryFormatter {
+    static func codexMenuBarTitle(
+        displayMode: QuotaDisplayMode,
+        fiveHour: Int?,
+        sevenDay: Int?
+    ) -> String {
+        displayMode.displayedQuotas.map { quota in
+            switch quota {
+            case .fiveHour:
+                return "5H \(percentText(fiveHour))"
+            case .sevenDay:
+                return "7D \(percentText(sevenDay))"
+            }
+        }.joined(separator: " · ")
+    }
+
+    static func manualMenuBarTitle(percent: Int) -> String {
+        "TOKEN \(min(100, max(0, percent)))%"
+    }
+
+    private static func percentText(_ percent: Int?) -> String {
+        percent.map { "\(min(100, max(0, $0)))%" } ?? "--"
+    }
+}
+
 enum DeviceTransportMode: String, CaseIterable, Identifiable {
     case automatic
     case wifi

@@ -18,6 +18,11 @@ Wi-Fi.
 - Center text alternates `5H 80` for 7 seconds and `7D 65` for 3 seconds
 - Five-hour and seven-day quotas can be enabled independently; single-quota
   modes stay on the selected value without page rotation
+- The macOS menu bar can show the enabled quota values next to the activity
+  icon
+- A draggable desktop status card shows quota, model activity, model source,
+  TC001 connection, battery, and last-sync state; visibility and always-on-top
+  behavior are configurable
 - Time, date, temperature, humidity, and battery pages can be toggled over
   Wi-Fi or BLE
 - The version row opens an updater with automatic and manual GitHub Release

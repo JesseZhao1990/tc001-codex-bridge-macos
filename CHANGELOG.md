@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.9.0
+
+- Added live five-hour and seven-day quota text to the macOS menu bar.
+- Added a polished, draggable desktop status card for quota, model activity,
+  model source, device connection, battery, and last-sync state.
+- Added persistent controls for menu-bar quota text, desktop-card visibility,
+  and always-on-top behavior.
+- Kept the TC001 display, menu popover, menu-bar title, settings summary, and
+  desktop card synchronized with the same quota visibility switches.
+
 ## 1.8.0
 
 - Added independent five-hour and seven-day quota display switches.

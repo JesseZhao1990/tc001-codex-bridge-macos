@@ -40,6 +40,21 @@ Developer ID signature and Apple notarization.
 - Automatic monitoring reads local Codex state. Manual mode accepts a quota
   value through the loopback API.
 
+## Menu bar and desktop card
+
+- Enable `Show quota in menu bar` to append the selected `5H` and/or `7D`
+  values to the activity icon.
+- Enable `Show desktop card` for a floating overview of quota, model activity,
+  model source, TC001 connection, battery, and last-sync state.
+- Drag the card from its background to move it. The app restores its last
+  position.
+- Use the pin button on the card, or `Keep desktop card on top` in settings, to
+  switch between a floating card and a normal window.
+- Use the card's close button or the menu popover command to hide it. It can be
+  shown again from settings or the menu popover.
+- The five-hour and seven-day switches apply to the TC001, menu popover, menu
+  bar, and desktop card at the same time.
+
 ## Built-in AWTRIX pages
 
 The time, date, temperature, humidity, and battery switches can be changed in
