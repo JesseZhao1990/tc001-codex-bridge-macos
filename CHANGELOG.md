@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.10.0
+
+- Replaced the app-owned floating desktop card with a native WidgetKit desktop
+  widget managed by macOS.
+- Added polished small and medium widget layouts for quota, model activity,
+  model source, TC001 connection, battery, and last-sync state.
+- Added a read-only loopback status snapshot for the sandboxed widget extension
+  and an offline state when the bridge app is not running.
+- Added a widget deep link that opens TC001 Bridge settings.
+- Removed the obsolete desktop-card visibility, pinning, dragging, and
+  always-on-top controls.
+
 ## 1.9.0
 
 - Added live five-hour and seven-day quota text to the macOS menu bar.

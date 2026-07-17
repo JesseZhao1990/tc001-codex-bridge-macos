@@ -2,6 +2,7 @@ import AppKit
 import Combine
 import Foundation
 import SwiftUI
+import WidgetKit
 
 @MainActor
 final class BridgeStore: ObservableObject {
@@ -13,8 +14,6 @@ final class BridgeStore: ObservableObject {
         static let manualPercent = "manualPercent"
         static let autoMonitor = "autoMonitor"
         static let showQuotaInMenuBar = "showQuotaInMenuBar"
-        static let desktopCardVisible = "desktopCardVisible"
-        static let desktopCardAlwaysOnTop = "desktopCardAlwaysOnTop"
     }
 
     @Published var deviceAddress: String {
@@ -82,18 +81,6 @@ final class BridgeStore: ObservableObject {
         }
     }
 
-    @Published var desktopCardVisible: Bool {
-        didSet {
-            defaults.set(desktopCardVisible, forKey: DefaultsKey.desktopCardVisible)
-        }
-    }
-
-    @Published var desktopCardAlwaysOnTop: Bool {
-        didSet {
-            defaults.set(desktopCardAlwaysOnTop, forKey: DefaultsKey.desktopCardAlwaysOnTop)
-        }
-    }
-
     @Published var nativeApps = NativeAppsSettings() {
         didSet {
             guard !updatingNativeAppsFromDevice, oldValue != nativeApps else { return }
@@ -143,6 +130,7 @@ final class BridgeStore: ObservableObject {
     private var quotaWarningFrame = 0
     private var automaticUsesBluetooth = false
     private var lampTestSession = LampTestSession()
+    private var lastWidgetStatusSignature: String?
 
     init(
         defaults: UserDefaults = .standard,
@@ -169,12 +157,6 @@ final class BridgeStore: ObservableObject {
         self.showQuotaInMenuBar = defaults.object(forKey: DefaultsKey.showQuotaInMenuBar) == nil
             ? true
             : defaults.bool(forKey: DefaultsKey.showQuotaInMenuBar)
-        self.desktopCardVisible = defaults.object(forKey: DefaultsKey.desktopCardVisible) == nil
-            ? true
-            : defaults.bool(forKey: DefaultsKey.desktopCardVisible)
-        self.desktopCardAlwaysOnTop = defaults.object(forKey: DefaultsKey.desktopCardAlwaysOnTop) == nil
-            ? true
-            : defaults.bool(forKey: DefaultsKey.desktopCardAlwaysOnTop)
 
         DispatchQueue.main.async { [weak self] in
             self?.start()
@@ -547,6 +529,7 @@ final class BridgeStore: ObservableObject {
         )
         localServer = server
         server.start()
+        publishWidgetStatusIfNeeded(forceReload: true)
 
         let coordinator = AIProviderCoordinator(
             providers: aiProviders,
@@ -573,6 +556,7 @@ final class BridgeStore: ObservableObject {
 
     private func tick() {
         let now = Date()
+        publishWidgetStatusIfNeeded()
         if lampTestSession.expireIfNeeded(at: now) {
             lampTestActivity = nil
             animationFrame = 0
@@ -601,6 +585,54 @@ final class BridgeStore: ObservableObject {
         DispatchQueue.main.async { [weak self] in
             self?.syncIfNeeded(force: true, switchToApp: switchToApp)
         }
+    }
+
+    private func publishWidgetStatusIfNeeded(forceReload: Bool = false) {
+        guard let localServer else { return }
+
+        let snapshot = makeWidgetStatusSnapshot()
+        guard let data = try? JSONEncoder().encode(snapshot) else { return }
+        localServer.updateWidgetStatus(data)
+
+        let signature = snapshot.contentSignature
+        guard forceReload || signature != lastWidgetStatusSignature else { return }
+        lastWidgetStatusSignature = signature
+        WidgetCenter.shared.reloadTimelines(ofKind: WidgetConstants.kind)
+    }
+
+    private func makeWidgetStatusSnapshot() -> WidgetStatusSnapshot {
+        let connection: WidgetConnectionState
+        switch connectionState {
+        case .unknown:
+            connection = .unknown
+        case .checking:
+            if let lastSyncDate,
+               Date().timeIntervalSince(lastSyncDate) < 90 {
+                connection = .connected
+            } else {
+                connection = .checking
+            }
+        case .connected:
+            connection = .connected
+        case .failed:
+            connection = .failed
+        }
+
+        return WidgetStatusSnapshot(
+            generatedAt: Date(),
+            quotaSource: tokenMode == .codex ? .codex : .manual,
+            fiveHourRemainingPercent: fiveHourRemainingPercent,
+            sevenDayRemainingPercent: sevenDayRemainingPercent,
+            manualRemainingPercent: tokenMode == .manualBridge ? effectivePercent : nil,
+            showsFiveHourQuota: showsFiveHourQuota,
+            showsSevenDayQuota: showsSevenDayQuota,
+            activity: WidgetActivityState(rawValue: effectiveActivity.rawValue) ?? .idle,
+            sourceTitle: tokenSourceTitle,
+            transportTitle: transportTitle,
+            connection: connection,
+            batteryPercent: deviceStats.battery,
+            lastSyncDate: lastSyncDate
+        )
     }
 
     private func syncIfNeeded(force: Bool, switchToApp: Bool) {

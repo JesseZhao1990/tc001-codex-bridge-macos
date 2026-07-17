@@ -19,6 +19,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         return true
     }
 
+    func application(_ application: NSApplication, open urls: [URL]) {
+        guard urls.contains(where: { $0.scheme == WidgetConstants.appURLScheme }) else { return }
+        showSettings()
+    }
+
     private func showSettings() {
         NotificationCenter.default.post(name: .showTC001Settings, object: nil)
     }
@@ -29,13 +34,12 @@ struct TC001BridgeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @StateObject private var store = BridgeStore()
     @StateObject private var updateManager = AppUpdateManager()
-    @StateObject private var desktopCardController = DesktopCardController()
 
     var body: some Scene {
         MenuBarExtra {
             MenuContentView(store: store)
         } label: {
-            MenuBarLabel(store: store, desktopCardController: desktopCardController)
+            MenuBarLabel(store: store)
         }
         .menuBarExtraStyle(.window)
 
@@ -49,7 +53,6 @@ struct TC001BridgeApp: App {
 
 private struct MenuBarLabel: View {
     @ObservedObject var store: BridgeStore
-    @ObservedObject var desktopCardController: DesktopCardController
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -62,26 +65,9 @@ private struct MenuBarLabel: View {
             }
         }
             .accessibilityLabel("TC001 Bridge")
-            .onAppear {
-                updateDesktopCard()
-            }
-            .onChange(of: store.desktopCardVisible) { _ in
-                updateDesktopCard()
-            }
-            .onChange(of: store.desktopCardAlwaysOnTop) { _ in
-                updateDesktopCard()
-            }
             .onReceive(NotificationCenter.default.publisher(for: .showTC001Settings)) { _ in
                 openWindow(id: "settings")
                 NSApp.activate(ignoringOtherApps: true)
             }
-    }
-
-    private func updateDesktopCard() {
-        desktopCardController.apply(
-            isVisible: store.desktopCardVisible,
-            alwaysOnTop: store.desktopCardAlwaysOnTop,
-            store: store
-        )
     }
 }

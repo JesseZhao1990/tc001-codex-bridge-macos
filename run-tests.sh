@@ -118,3 +118,11 @@ swiftc \
   -framework Network \
   -o "$BUILD_DIR/local-bridge-server-tests"
 "$BUILD_DIR/local-bridge-server-tests"
+
+swiftc \
+  -swift-version 5 \
+  -parse-as-library \
+  "$ROOT/Sources/WidgetStatusSnapshot.swift" \
+  "$ROOT/Tests/WidgetStatusSnapshotTests.swift" \
+  -o "$BUILD_DIR/widget-status-snapshot-tests"
+"$BUILD_DIR/widget-status-snapshot-tests"

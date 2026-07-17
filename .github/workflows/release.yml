@@ -29,9 +29,12 @@ jobs:
           expected_version="${GITHUB_REF_NAME#v}"
           actual_version="$(plutil -extract CFBundleShortVersionString raw "dist/TC001 Bridge.app/Contents/Info.plist")"
           test "$actual_version" = "$expected_version"
+          widget_version="$(plutil -extract CFBundleShortVersionString raw "dist/TC001 Bridge.app/Contents/PlugIns/TC001 Bridge Widget.appex/Contents/Info.plist")"
+          test "$widget_version" = "$expected_version"
 
           test "$(lipo -archs "dist/TC001 Bridge.app/Contents/MacOS/TC001Bridge")" = "x86_64 arm64"
           test "$(lipo -archs "dist/TC001 Bridge.app/Contents/Helpers/TC001UpdateHelper")" = "x86_64 arm64"
+          test "$(lipo -archs "dist/TC001 Bridge.app/Contents/PlugIns/TC001 Bridge Widget.appex/Contents/MacOS/TC001BridgeWidget")" = "x86_64 arm64"
           codesign --verify --deep --strict --verbose=2 "dist/TC001 Bridge.app"
 
           cd dist

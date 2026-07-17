@@ -18,6 +18,8 @@ final class LocalBridgeServer {
     private let onCommand: CommandHandler
     private let onState: StateHandler
     private var listener: NWListener?
+    private let widgetStatusLock = NSLock()
+    private var widgetStatusData: Data?
 
     init(port: UInt16 = 8765, onCommand: @escaping CommandHandler, onState: @escaping StateHandler) {
         self.portNumber = port
@@ -51,7 +53,12 @@ final class LocalBridgeServer {
             }
             listener.newConnectionHandler = { [weak self] connection in
                 guard let self else { return }
-                HTTPConnection(connection: connection, onCommand: self.onCommand).start(on: self.queue)
+                HTTPConnection(
+                    connection: connection,
+                    onCommand: self.onCommand,
+                    widgetStatus: { [weak self] in self?.currentWidgetStatus() }
+                )
+                .start(on: self.queue)
             }
             listener.start(queue: queue)
         } catch {
@@ -63,16 +70,34 @@ final class LocalBridgeServer {
         listener?.cancel()
         listener = nil
     }
+
+    func updateWidgetStatus(_ data: Data) {
+        widgetStatusLock.lock()
+        widgetStatusData = data
+        widgetStatusLock.unlock()
+    }
+
+    private func currentWidgetStatus() -> Data? {
+        widgetStatusLock.lock()
+        defer { widgetStatusLock.unlock() }
+        return widgetStatusData
+    }
 }
 
 private final class HTTPConnection {
     private let connection: NWConnection
     private let onCommand: (LocalBridgeCommand) -> Void
+    private let widgetStatus: () -> Data?
     private var received = Data()
 
-    init(connection: NWConnection, onCommand: @escaping (LocalBridgeCommand) -> Void) {
+    init(
+        connection: NWConnection,
+        onCommand: @escaping (LocalBridgeCommand) -> Void,
+        widgetStatus: @escaping () -> Data?
+    ) {
         self.connection = connection
         self.onCommand = onCommand
+        self.widgetStatus = widgetStatus
     }
 
     func start(on queue: DispatchQueue) {
@@ -148,6 +173,14 @@ private final class HTTPConnection {
             respond(status: 200, json: ["ok": true, "service": "TC001 Bridge"])
             return
         }
+        if method == "GET", path == "/widget/status" {
+            guard let widgetStatus = widgetStatus() else {
+                respond(status: 503, json: ["ok": false, "error": "status unavailable"])
+                return
+            }
+            respond(status: 200, body: widgetStatus)
+            return
+        }
         guard method == "POST" else {
             respond(status: 405, json: ["ok": false, "error": "method not allowed"])
             return
@@ -180,6 +213,10 @@ private final class HTTPConnection {
 
     private func respond(status: Int, json: [String: Any]?) {
         let body = json.flatMap { try? JSONSerialization.data(withJSONObject: $0) } ?? Data()
+        respond(status: status, body: body)
+    }
+
+    private func respond(status: Int, body: Data) {
         let reason: String
         switch status {
         case 200: reason = "OK"
@@ -189,6 +226,7 @@ private final class HTTPConnection {
         case 404: reason = "Not Found"
         case 405: reason = "Method Not Allowed"
         case 422: reason = "Unprocessable Entity"
+        case 503: reason = "Service Unavailable"
         default: reason = "Error"
         }
         let headers = "HTTP/1.1 \(status) \(reason)\r\n" +

@@ -20,9 +20,8 @@ Wi-Fi.
   modes stay on the selected value without page rotation
 - The macOS menu bar can show the enabled quota values next to the activity
   icon
-- A draggable desktop status card shows quota, model activity, model source,
-  TC001 connection, battery, and last-sync state; visibility and always-on-top
-  behavior are configurable
+- A native WidgetKit desktop widget shows quota, model activity, model source,
+  TC001 connection, battery, and last-sync state in small and medium sizes
 - Time, date, temperature, humidity, and battery pages can be toggled over
   Wi-Fi or BLE
 - The version row opens an updater with automatic and manual GitHub Release
@@ -31,6 +30,7 @@ Wi-Fi.
 ## Requirements
 
 - macOS 13 or later
+- macOS 14 or later for the desktop widget
 - Apple Silicon or Intel Mac, depending on the architecture you build
 - Codex desktop app or Codex CLI installed and signed in
 - Ulanzi TC001 with AWTRIX 3
@@ -69,7 +69,9 @@ that frame to AWTRIX. See [architecture](docs/architecture.md) and
 
 An optional native-process bridge listens only on `127.0.0.1:8765`. Its API is
 documented in [local bridge API](docs/local-bridge-api.md). Requests carrying a
-browser `Origin` header are intentionally rejected.
+browser `Origin` header are intentionally rejected. The WidgetKit extension
+uses a read-only loopback endpoint from this bridge to obtain its current
+snapshot.
 
 ## Related firmware
 

@@ -69,25 +69,6 @@ struct MenuContentView: View {
             }
             .font(.caption)
 
-            Button {
-                store.desktopCardVisible.toggle()
-            } label: {
-                HStack {
-                    Label(
-                        store.desktopCardVisible ? "隐藏桌面卡片" : "显示桌面卡片",
-                        systemImage: store.desktopCardVisible
-                            ? "rectangle.on.rectangle.slash"
-                            : "rectangle.on.rectangle"
-                    )
-                    Spacer()
-                    Text(store.desktopCardAlwaysOnTop ? "已置顶" : "普通窗口")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-
             Divider()
 
             HStack(spacing: 10) {
@@ -295,7 +276,7 @@ struct SettingsView: View {
                         isOn: quotaBinding(.sevenDay),
                         canTurnOff: store.showsFiveHourQuota
                     )
-                    Text("至少选择一种额度；开关会同步影响 TC001、菜单栏和桌面卡片。")
+                    Text("至少选择一种额度；开关会同步影响 TC001、菜单栏和桌面小组件。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -303,13 +284,22 @@ struct SettingsView: View {
 
             Section("显示") {
                 Toggle("菜单栏显示额度", isOn: $store.showQuotaInMenuBar)
-                Toggle("显示桌面卡片", isOn: $store.desktopCardVisible)
-                Toggle("桌面卡片始终置顶", isOn: $store.desktopCardAlwaysOnTop)
-                    .disabled(!store.desktopCardVisible)
 
-                Text("桌面卡片可以拖动位置，并会记住上次停放的位置。")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if #available(macOS 14.0, *) {
+                    LabeledContent("桌面小组件") {
+                        Label("已随应用安装", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                    }
+
+                    Text("在桌面空白处点按右键，选择“编辑小组件”，搜索“TC001 Bridge”后添加。小组件的位置和尺寸由 macOS 管理。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    LabeledContent("桌面小组件") {
+                        Label("需要 macOS 14", systemImage: "exclamationmark.circle")
+                            .foregroundStyle(.orange)
+                    }
+                }
             }
 
             Section("模型状态") {

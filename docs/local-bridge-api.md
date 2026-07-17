@@ -10,6 +10,17 @@ rejected.
 GET /health
 ```
 
+## Desktop widget status
+
+```text
+GET /widget/status
+```
+
+Returns the current read-only JSON snapshot used by the native WidgetKit
+extension, including enabled quota values, model activity, data source, TC001
+transport and connection state, battery, and last synchronization time. The
+endpoint returns `503` until the first snapshot is available.
+
 ## Activity
 
 ```text

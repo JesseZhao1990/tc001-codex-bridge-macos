@@ -38,15 +38,33 @@ struct LocalBridgeServerTests {
         let health = try request(port: port, method: "GET", path: "/health")
         try check(health.status == 200, "health endpoint should accept a native client")
 
+        let unavailableWidget = try request(
+            port: port,
+            method: "GET",
+            path: "/widget/status"
+        )
+        try check(
+            unavailableWidget.status == 503,
+            "widget status should be unavailable before the first snapshot"
+        )
+
+        let widgetJSON = Data(
+            #"{"activity":"working","connection":"connected","quota":72}"#.utf8
+        )
+        server.updateWidgetStatus(widgetJSON)
+        let widget = try request(port: port, method: "GET", path: "/widget/status")
+        try check(widget.status == 200, "widget status should accept a native client")
+        try check(widget.body == widgetJSON, "widget status should return the latest snapshot")
+
         let blocked = try request(
             port: port,
             method: "GET",
-            path: "/health",
+            path: "/widget/status",
             headers: ["Origin": "https://example.invalid"]
         )
         try check(
             blocked.status == 403,
-            "browser-origin requests should be rejected, got \(blocked.status)"
+            "browser-origin widget requests should be rejected, got \(blocked.status)"
         )
 
         let start = try request(port: port, method: "POST", path: "/model/start")
@@ -87,8 +105,7 @@ struct LocalBridgeServerTests {
             "--silent",
             "--show-error",
             "--max-time", "3",
-            "--output", "/dev/null",
-            "--write-out", "%{http_code}",
+            "--write-out", "\n__TC001_HTTP_STATUS__:%{http_code}",
             "--request", method
         ]
         for (name, value) in headers {
@@ -111,14 +128,17 @@ struct LocalBridgeServerTests {
             )
             throw TestFailure("curl failed: \(message)")
         }
-        let statusText = String(
-            decoding: output.fileHandleForReading.readDataToEndOfFile(),
-            as: UTF8.self
-        )
-        guard let responseStatus = Int(statusText) else {
+        let responseData = output.fileHandleForReading.readDataToEndOfFile()
+        let responseText = String(decoding: responseData, as: UTF8.self)
+        let marker = "\n__TC001_HTTP_STATUS__:"
+        guard let markerRange = responseText.range(of: marker, options: .backwards),
+              let responseStatus = Int(responseText[markerRange.upperBound...]) else {
             throw TestFailure("response did not include an HTTP status")
         }
-        return (responseStatus, Data())
+        return (
+            responseStatus,
+            Data(responseText[..<markerRange.lowerBound].utf8)
+        )
     }
 
     private static func check(_ condition: Bool, _ message: String) throws {

@@ -40,20 +40,19 @@ Developer ID signature and Apple notarization.
 - Automatic monitoring reads local Codex state. Manual mode accepts a quota
   value through the loopback API.
 
-## Menu bar and desktop card
+## Menu bar and desktop widget
 
 - Enable `Show quota in menu bar` to append the selected `5H` and/or `7D`
   values to the activity icon.
-- Enable `Show desktop card` for a floating overview of quota, model activity,
-  model source, TC001 connection, battery, and last-sync state.
-- Drag the card from its background to move it. The app restores its last
-  position.
-- Use the pin button on the card, or `Keep desktop card on top` in settings, to
-  switch between a floating card and a normal window.
-- Use the card's close button or the menu popover command to hide it. It can be
-  shown again from settings or the menu popover.
+- On macOS 14 or later, right-click an empty area of the desktop, choose
+  `Edit Widgets`, search for `TC001 Bridge`, and add the small or medium widget.
+- The widget is a native WidgetKit component. macOS manages its desktop
+  position, size, appearance, and removal.
+- Keep TC001 Bridge running in the menu bar so the widget can read the latest
+  local quota, model activity, and device state. If the app is not running, the
+  widget shows an offline prompt; clicking it opens the app.
 - The five-hour and seven-day switches apply to the TC001, menu popover, menu
-  bar, and desktop card at the same time.
+  bar, and desktop widget at the same time.
 
 ## Built-in AWTRIX pages
 
@@ -69,6 +68,9 @@ BLE mode applies the five flags immediately without a reboot.
   confirm the Mac and TC001 are on the same reachable network.
 - No quota: confirm Codex desktop or CLI is installed and signed in, then wait
   for the next refresh.
+- Widget missing from the gallery: launch TC001 Bridge once after installing or
+  updating it, then reopen `Edit Widgets`. The desktop widget requires macOS 14
+  or later.
 - Wrong status: leave automatic monitoring enabled and make sure only one copy
   of TC001 Bridge is running.
 

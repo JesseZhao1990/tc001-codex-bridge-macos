@@ -8,6 +8,9 @@ flowchart LR
     H["Loopback bridge"] --> A["Activity arbiter"]
     P --> A
     A --> R["32 x 8 frame renderer"]
+    A --> Q["Widget status snapshot"]
+    Q --> L["Read-only loopback endpoint"]
+    L --> D["WidgetKit desktop widget"]
     R --> W["AWTRIX HTTP client"]
     R --> B["AWTRIX BLE client"]
     W --> T["TC001"]
@@ -26,7 +29,11 @@ flowchart LR
 - `AWTRIXClient` owns rendering and the normal HTTP transport.
 - `AWTRIXBLEClient` and `BLEProtocol` own GATT discovery and frame transfer.
 - `BridgeStore` coordinates state, display timing, settings, and transport
-  fallback for the SwiftUI views.
+  fallback for the SwiftUI views. It also publishes the current read-only
+  widget snapshot to the loopback bridge and requests WidgetKit timeline
+  reloads when visible state changes.
+- The sandboxed WidgetKit extension reads the snapshot from `127.0.0.1`; it
+  never connects to Codex, TC001, or a project-operated service directly.
 - `AppUpdateManager` discovers and validates GitHub Releases. The bundled
   helper replaces the app only after the main process exits, then relaunches
   it and rolls back if replacement or launch fails.

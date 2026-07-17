@@ -22,6 +22,7 @@ Verify both architectures and the signature:
 
 ```bash
 lipo -archs "dist/TC001 Bridge.app/Contents/MacOS/TC001Bridge"
+lipo -archs "dist/TC001 Bridge.app/Contents/PlugIns/TC001 Bridge Widget.appex/Contents/MacOS/TC001BridgeWidget"
 codesign --verify --deep --strict --verbose=2 "dist/TC001 Bridge.app"
 ```
 

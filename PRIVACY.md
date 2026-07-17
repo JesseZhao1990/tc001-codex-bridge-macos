@@ -32,6 +32,8 @@ is not proxied through this project.
 
 The optional bridge binds to `127.0.0.1:8765`. Request bodies are handled in
 memory and are not logged or retained. Browser-origin requests are rejected.
+The sandboxed WidgetKit extension reads a current status snapshot from a
+read-only loopback endpoint; the snapshot does not leave the Mac.
 
 Do not attach Codex session files, complete device flash dumps, or diagnostic
 logs containing account or device information to public issues.
